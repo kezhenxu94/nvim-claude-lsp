@@ -17,7 +17,7 @@ When you press **Ctrl+G** in Claude Code to compose a message in Neovim, this pl
 
 **vim.pack** (built-in Neovim package manager):
 ```lua
-vim.pack.add("kezhenxu94/nvim-claude-lsp")
+vim.pack.add({ "https://github.com/kezhenxu94/nvim-claude-lsp" })
 require("nvim-claude-lsp").setup()
 ```
 
