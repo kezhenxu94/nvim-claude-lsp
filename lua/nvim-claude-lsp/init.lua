@@ -27,21 +27,22 @@ function M.setup(opts)
   -- server.js lives at: server/dist/server.js  (three :h steps up, then descend)
   local plugin_root = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":h:h:h")
   local server_js = plugin_root .. "/server/dist/server.js"
+  local node_cmd = M.config.node_cmd
 
-  vim.lsp.config("claude_lsp", {
-    cmd = { M.config.node_cmd, server_js, "--stdio" },
-    -- Claude Code opens .md files or unnamed buffers; cover both
-    filetypes = { "markdown", "text" },
-    root_dir = function(bufnr, on_dir)
-      local bufname = vim.api.nvim_buf_get_name(bufnr)
-      if M._is_claude_buffer(bufname) then
-        on_dir(vim.fn.getcwd())
-      end
-      -- If not a Claude buffer, on_dir is never called -> LSP does not activate
+  vim.api.nvim_create_autocmd({ "BufEnter", "BufRead" }, {
+    group = vim.api.nvim_create_augroup("nvim-claude-lsp", { clear = true }),
+    callback = function(ev)
+      local bufname = vim.api.nvim_buf_get_name(ev.buf)
+      if not M._is_claude_buffer(bufname) then return end
+
+      vim.lsp.start({
+        name = "claude_lsp",
+        cmd = { node_cmd, server_js, "--stdio" },
+        root_dir = vim.fn.getcwd(),
+        capabilities = vim.lsp.protocol.make_client_capabilities(),
+      }, { bufnr = ev.buf })
     end,
   })
-
-  vim.lsp.enable("claude_lsp")
 end
 
 return M
