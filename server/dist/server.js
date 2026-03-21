@@ -9308,6 +9308,7 @@ var BUILTIN_COMMANDS = [
 var fs2 = __toESM(require("fs"));
 var path2 = __toESM(require("path"));
 var os = __toESM(require("os"));
+var import_child_process = require("child_process");
 function parseFrontmatter(content) {
   const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!match) return null;
@@ -9337,15 +9338,32 @@ function* walkMarkdownFiles(dir) {
     }
   }
 }
-function discoverSkills(projectDir, pluginsDir) {
-  const globalDir = pluginsDir ?? path2.join(os.homedir(), ".claude", "plugins");
+function getEnabledPluginSkillDirs() {
+  try {
+    const result = (0, import_child_process.spawnSync)("claude", ["plugins", "list", "--json"], {
+      encoding: "utf8",
+      timeout: 3e3
+    });
+    if (result.status !== 0 || !result.stdout) return [];
+    const plugins = JSON.parse(result.stdout);
+    return plugins.filter((p) => p.enabled).map((p) => path2.join(p.installPath, "skills"));
+  } catch {
+    return [];
+  }
+}
+function discoverSkills(projectDir) {
   const skills = [];
   const seen = /* @__PURE__ */ new Set();
   const dirs = [];
   if (projectDir) {
     dirs.push(path2.join(projectDir, ".claude"));
   }
-  dirs.push(globalDir);
+  const pluginDirs = getEnabledPluginSkillDirs();
+  if (pluginDirs.length > 0) {
+    dirs.push(...pluginDirs);
+  } else {
+    dirs.push(path2.join(os.homedir(), ".claude", "plugins"));
+  }
   for (const dir of dirs) {
     for (const filePath of walkMarkdownFiles(dir)) {
       let content;

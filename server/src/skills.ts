@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import { spawnSync } from "child_process";
 import { SlashCommand } from "./commands";
 
 /** Parse YAML frontmatter from a markdown file. Returns null if none found. */
@@ -39,23 +40,51 @@ function* walkMarkdownFiles(dir: string): Generator<string> {
 }
 
 /**
- * Discover Claude Code skills from two locations (in priority order):
- *   1. <projectDir>/.claude/  — project-local skills (highest priority)
- *   2. ~/.claude/plugins/     — globally installed skills
- *
- * Project-local skills override global ones with the same name.
+ * Run `claude plugins list --json` and return the `skills/` directory path
+ * for each enabled plugin. Falls back to an empty list if the CLI is unavailable.
  */
-export function discoverSkills(projectDir?: string, pluginsDir?: string): SlashCommand[] {
-  const globalDir = pluginsDir ?? path.join(os.homedir(), ".claude", "plugins");
+function getEnabledPluginSkillDirs(): string[] {
+  try {
+    const result = spawnSync("claude", ["plugins", "list", "--json"], {
+      encoding: "utf8",
+      timeout: 3000,
+    });
+    if (result.status !== 0 || !result.stdout) return [];
+    const plugins: Array<{ enabled: boolean; installPath: string }> = JSON.parse(result.stdout);
+    return plugins
+      .filter((p) => p.enabled)
+      .map((p) => path.join(p.installPath, "skills"));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Discover Claude Code skills from (in priority order):
+ *   1. <projectDir>/.claude/        — project-local skills (highest priority)
+ *   2. <plugin installPath>/skills/ — enabled plugins (via `claude plugins list --json`)
+ *   3. ~/.claude/plugins/           — fallback if claude CLI is unavailable
+ *
+ * Higher-priority skills override lower-priority ones with the same name.
+ */
+export function discoverSkills(projectDir?: string): SlashCommand[] {
   const skills: SlashCommand[] = [];
   const seen = new Set<string>();
 
-  // Scan in priority order: project-local first, global second.
   const dirs: string[] = [];
+
+  // 1. Project-local (highest priority)
   if (projectDir) {
     dirs.push(path.join(projectDir, ".claude"));
   }
-  dirs.push(globalDir);
+
+  // 2. Enabled plugins via CLI; fallback to scanning ~/.claude/plugins/ directly
+  const pluginDirs = getEnabledPluginSkillDirs();
+  if (pluginDirs.length > 0) {
+    dirs.push(...pluginDirs);
+  } else {
+    dirs.push(path.join(os.homedir(), ".claude", "plugins"));
+  }
 
   for (const dir of dirs) {
     for (const filePath of walkMarkdownFiles(dir)) {
@@ -70,7 +99,7 @@ export function discoverSkills(projectDir?: string, pluginsDir?: string): SlashC
       if (!fm?.name) continue;
 
       const cmdName = fm.name.startsWith("/") ? fm.name : `/${fm.name}`;
-      if (seen.has(cmdName)) continue; // project-local already registered
+      if (seen.has(cmdName)) continue;
       seen.add(cmdName);
 
       skills.push({
