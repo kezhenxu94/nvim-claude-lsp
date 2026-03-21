@@ -1,0 +1,49 @@
+*nvim-claude-lsp.txt*   LSP completions for Claude Code CLI chat input
+
+INTRODUCTION                                            *nvim-claude-lsp*
+
+nvim-claude-lsp provides LSP-powered completions for the Claude Code CLI
+chat input buffer (opened via Ctrl+G in Claude Code).
+
+Completions provided:
+  - Slash commands (/help, /clear, /compact, ...)
+  - File references (@path/to/file)
+  - User-installed skills (auto-discovered from ~/.claude/plugins/)
+
+SETUP                                                   *nvim-claude-lsp-setup*
+
+Requires Node.js >= 18 to be installed.
+
+With vim.pack: >lua
+  vim.pack.add("kezhenxu94/nvim-claude-lsp")
+  require("nvim-claude-lsp").setup()
+<
+
+With lazy.nvim: >lua
+  {
+    "kezhenxu94/nvim-claude-lsp",
+    ft = { "markdown", "text" },
+    opts = {},
+  }
+<
+
+CONFIGURATION                                           *nvim-claude-lsp-config*
+
+>lua
+  require("nvim-claude-lsp").setup({
+    -- Path to node binary (default: "node")
+    node_cmd = "node",
+  })
+<
+
+BUFFER DETECTION                                        *nvim-claude-lsp-detection*
+
+The plugin activates on buffers that match either condition:
+  1. File path matches /tmp/claude-<uid>/ (Claude Code Ctrl+G buffer)
+  2. File is under /tmp/ AND the CLAUDECODE=1 env var is set
+
+LICENSE                                                 *nvim-claude-lsp-license*
+
+MIT
+
+vim:tw=78:ts=8:ft=help:norl:
