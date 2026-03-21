@@ -70,7 +70,7 @@ connection.onCompletionResolve((item) => {
 connection.onHover((params) => {
   const doc = documents.get(params.textDocument.uri);
   if (!doc) return null;
-  return getHover(doc, params.position, allCommands);
+  return getHover(doc, params.position, allCommands, allPlugins);
 });
 
 documents.listen(connection);

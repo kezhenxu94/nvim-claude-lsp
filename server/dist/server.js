@@ -9201,8 +9201,8 @@ function getWordRange(doc, position) {
   });
   let start = position.character;
   let end = position.character;
-  while (start > 0 && /[\w/]/.test(line[start - 1])) start--;
-  while (end < line.length && /[\w/]/.test(line[end])) end++;
+  while (start > 0 && /[\w/@]/.test(line[start - 1])) start--;
+  while (end < line.length && /[\w/@]/.test(line[end])) end++;
   return {
     word: line.slice(start, end),
     range: {
@@ -9211,20 +9211,36 @@ function getWordRange(doc, position) {
     }
   };
 }
-function getHover(doc, position, commands) {
+function getHover(doc, position, commands, plugins) {
   const { word, range } = getWordRange(doc, position);
-  if (!word.startsWith("/")) return null;
-  const cmd = commands.find((c) => c.name === word);
-  if (!cmd) return null;
-  return {
-    contents: {
-      kind: "markdown",
-      value: `**${cmd.name}** \u2014 ${cmd.detail}
+  if (word.startsWith("/")) {
+    const cmd = commands.find((c) => c.name === word);
+    if (!cmd) return null;
+    return {
+      contents: {
+        kind: "markdown",
+        value: `**${cmd.name}** \u2014 ${cmd.detail}
 
 ${cmd.documentation}`
-    },
-    range
-  };
+      },
+      range
+    };
+  }
+  if (word.startsWith("@")) {
+    const pluginName = word.slice(1);
+    const plugin = plugins.find((p) => p.name === pluginName);
+    if (!plugin) return null;
+    return {
+      contents: {
+        kind: "markdown",
+        value: `**@${plugin.name}** \u2014 Plugin
+
+Plugin ID: \`${plugin.id}\``
+      },
+      range
+    };
+  }
+  return null;
 }
 
 // src/commands.ts
@@ -9512,7 +9528,7 @@ connection.onCompletionResolve((item) => {
 connection.onHover((params) => {
   const doc = documents.get(params.textDocument.uri);
   if (!doc) return null;
-  return getHover(doc, params.position, allCommands);
+  return getHover(doc, params.position, allCommands, allPlugins);
 });
 documents.listen(connection);
 connection.listen();
