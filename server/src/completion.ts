@@ -8,6 +8,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import * as fs from "fs";
 import * as path from "path";
 import { SlashCommand } from "./commands";
+import { Plugin } from "./skills";
 
 type TriggerContext =
   | { type: "slash"; prefix: string }
@@ -36,6 +37,19 @@ export function getSlashCompletions(prefix: string, commands: SlashCommand[]): C
       // Documentation deferred to completionItem/resolve
       data: { type: "slash", name: cmd.name },
       insertText: cmd.name.slice(prefix.length),
+      insertTextFormat: InsertTextFormat.PlainText,
+    }));
+}
+
+export function getPluginCompletions(prefix: string, plugins: Plugin[]): CompletionItem[] {
+  return plugins
+    .filter((p) => p.name.startsWith(prefix))
+    .map((p) => ({
+      label: "@" + p.name,
+      kind: CompletionItemKind.Module,
+      detail: p.id,
+      data: { type: "plugin", name: p.name },
+      insertText: p.name.slice(prefix.length),
       insertTextFormat: InsertTextFormat.PlainText,
     }));
 }
@@ -99,7 +113,8 @@ export async function getCompletions(
   doc: TextDocument,
   position: Position,
   rootPath: string,
-  commands: SlashCommand[]
+  commands: SlashCommand[],
+  plugins: Plugin[]
 ): Promise<CompletionItem[]> {
   const lineText = doc.getText({
     start: { line: position.line, character: 0 },
@@ -113,7 +128,10 @@ export async function getCompletions(
   }
 
   if (ctx.type === "at") {
-    return getFileCompletions(ctx.prefix, rootPath);
+    // Merge plugin completions (shown first) with file completions
+    const pluginItems = getPluginCompletions(ctx.prefix, plugins);
+    const fileItems = await getFileCompletions(ctx.prefix, rootPath);
+    return [...pluginItems, ...fileItems];
   }
 
   return [];

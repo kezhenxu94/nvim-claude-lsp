@@ -9,16 +9,16 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { getCompletions } from "./completion";
 import { getHover } from "./hover";
 import { BUILTIN_COMMANDS, SlashCommand } from "./commands";
-import { discoverSkills } from "./skills";
+import { discoverSkills, discoverPlugins, Plugin } from "./skills";
 
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
 
 let rootPath = process.cwd();
 
-// Merged command list: built-ins + user-installed skills.
-// Built once on initialize and cached for the LSP session.
+// Merged command list and plugin list — built once on initialize.
 let allCommands: SlashCommand[] = [];
+let allPlugins: Plugin[] = [];
 
 connection.onInitialize((params): InitializeResult => {
   if (params.rootUri) {
@@ -35,6 +35,8 @@ connection.onInitialize((params): InitializeResult => {
     ...skills,
   ];
 
+  allPlugins = discoverPlugins();
+
   return {
     capabilities: {
       textDocumentSync: TextDocumentSyncKind.Incremental,
@@ -50,7 +52,7 @@ connection.onInitialize((params): InitializeResult => {
 connection.onCompletion(async (params) => {
   const doc = documents.get(params.textDocument.uri);
   if (!doc) return null;
-  return getCompletions(doc, params.position, rootPath, allCommands);
+  return getCompletions(doc, params.position, rootPath, allCommands, allPlugins);
 });
 
 connection.onCompletionResolve((item) => {

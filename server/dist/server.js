@@ -9124,6 +9124,16 @@ function getSlashCompletions(prefix, commands) {
     insertTextFormat: import_node.InsertTextFormat.PlainText
   }));
 }
+function getPluginCompletions(prefix, plugins) {
+  return plugins.filter((p) => p.name.startsWith(prefix)).map((p) => ({
+    label: "@" + p.name,
+    kind: import_node.CompletionItemKind.Module,
+    detail: p.id,
+    data: { type: "plugin", name: p.name },
+    insertText: p.name.slice(prefix.length),
+    insertTextFormat: import_node.InsertTextFormat.PlainText
+  }));
+}
 async function getFileCompletions(prefix, rootPath2) {
   const items = [];
   const searchDir = prefix.includes("/") ? path.join(rootPath2, prefix.substring(0, prefix.lastIndexOf("/"))) : rootPath2;
@@ -9166,7 +9176,7 @@ function walkDir(dir, rootPath2, depth, maxDepth) {
   }
   return results;
 }
-async function getCompletions(doc, position, rootPath2, commands) {
+async function getCompletions(doc, position, rootPath2, commands, plugins) {
   const lineText = doc.getText({
     start: { line: position.line, character: 0 },
     end: position
@@ -9176,7 +9186,9 @@ async function getCompletions(doc, position, rootPath2, commands) {
     return getSlashCompletions(ctx.prefix, commands);
   }
   if (ctx.type === "at") {
-    return getFileCompletions(ctx.prefix, rootPath2);
+    const pluginItems = getPluginCompletions(ctx.prefix, plugins);
+    const fileItems = await getFileCompletions(ctx.prefix, rootPath2);
+    return [...pluginItems, ...fileItems];
   }
   return [];
 }
@@ -9338,18 +9350,32 @@ function* walkMarkdownFiles(dir) {
     }
   }
 }
-function getEnabledPluginSkillDirs() {
+function discoverPlugins() {
   try {
     const result = (0, import_child_process.spawnSync)("claude", ["plugins", "list", "--json"], {
       encoding: "utf8",
       timeout: 3e3
     });
     if (result.status !== 0 || !result.stdout) return [];
-    const plugins = JSON.parse(result.stdout);
-    return plugins.filter((p) => p.enabled).map((p) => path2.join(p.installPath, "skills"));
+    const raw = JSON.parse(
+      result.stdout
+    );
+    return raw.filter((p) => p.enabled).map((p) => ({
+      name: p.id.split("@")[0],
+      // "context7@claude-plugins-official" → "context7"
+      id: p.id,
+      installPath: p.installPath
+    }));
   } catch {
     return [];
   }
+}
+function getEnabledPluginSkillDirs() {
+  const plugins = discoverPlugins();
+  if (plugins.length > 0) {
+    return plugins.map((p) => path2.join(p.installPath, "skills"));
+  }
+  return [];
 }
 function discoverSkills(projectDir) {
   const skills = [];
@@ -9394,6 +9420,7 @@ var connection = (0, import_node2.createConnection)(import_node2.ProposedFeature
 var documents = new import_node2.TextDocuments(TextDocument);
 var rootPath = process.cwd();
 var allCommands = [];
+var allPlugins = [];
 connection.onInitialize((params) => {
   if (params.rootUri) {
     rootPath = params.rootUri.replace("file://", "");
@@ -9406,6 +9433,7 @@ connection.onInitialize((params) => {
     ...BUILTIN_COMMANDS.filter((c) => !skillNames.has(c.name)),
     ...skills
   ];
+  allPlugins = discoverPlugins();
   return {
     capabilities: {
       textDocumentSync: import_node2.TextDocumentSyncKind.Incremental,
@@ -9420,7 +9448,7 @@ connection.onInitialize((params) => {
 connection.onCompletion(async (params) => {
   const doc = documents.get(params.textDocument.uri);
   if (!doc) return null;
-  return getCompletions(doc, params.position, rootPath, allCommands);
+  return getCompletions(doc, params.position, rootPath, allCommands, allPlugins);
 });
 connection.onCompletionResolve((item) => {
   if (item.data?.type === "slash") {

@@ -39,24 +39,50 @@ function* walkMarkdownFiles(dir: string): Generator<string> {
   }
 }
 
+export interface Plugin {
+  /** Display name — the part before `@` in the plugin id, e.g. "context7" */
+  name: string;
+  /** Full plugin id, e.g. "context7@claude-plugins-official" */
+  id: string;
+  installPath: string;
+}
+
 /**
- * Run `claude plugins list --json` and return the `skills/` directory path
- * for each enabled plugin. Falls back to an empty list if the CLI is unavailable.
+ * Run `claude plugins list --json` and return metadata for all enabled plugins.
+ * Falls back to an empty list if the CLI is unavailable.
  */
-function getEnabledPluginSkillDirs(): string[] {
+export function discoverPlugins(): Plugin[] {
   try {
     const result = spawnSync("claude", ["plugins", "list", "--json"], {
       encoding: "utf8",
       timeout: 3000,
     });
     if (result.status !== 0 || !result.stdout) return [];
-    const plugins: Array<{ enabled: boolean; installPath: string }> = JSON.parse(result.stdout);
-    return plugins
+    const raw: Array<{ id: string; enabled: boolean; installPath: string }> = JSON.parse(
+      result.stdout
+    );
+    return raw
       .filter((p) => p.enabled)
-      .map((p) => path.join(p.installPath, "skills"));
+      .map((p) => ({
+        name: p.id.split("@")[0], // "context7@claude-plugins-official" → "context7"
+        id: p.id,
+        installPath: p.installPath,
+      }));
   } catch {
     return [];
   }
+}
+
+/**
+ * Return the `skills/` directory path for each enabled plugin.
+ * Falls back to scanning ~/.claude/plugins/ directly if CLI is unavailable.
+ */
+function getEnabledPluginSkillDirs(): string[] {
+  const plugins = discoverPlugins();
+  if (plugins.length > 0) {
+    return plugins.map((p) => path.join(p.installPath, "skills"));
+  }
+  return [];
 }
 
 /**
@@ -78,7 +104,7 @@ export function discoverSkills(projectDir?: string): SlashCommand[] {
     dirs.push(path.join(projectDir, ".claude"));
   }
 
-  // 2. Enabled plugins via CLI; fallback to scanning ~/.claude/plugins/ directly
+  // 2. Enabled plugin skill dirs via CLI; fallback to scanning ~/.claude/plugins/ directly
   const pluginDirs = getEnabledPluginSkillDirs();
   if (pluginDirs.length > 0) {
     dirs.push(...pluginDirs);
