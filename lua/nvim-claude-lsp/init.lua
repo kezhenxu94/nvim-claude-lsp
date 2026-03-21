@@ -6,18 +6,12 @@ M.config = {
 }
 
 --- Detect if a buffer is a Claude Code chat input buffer.
---- Detection order:
----   1. Path matches /tmp/claude-<digits>/ (most precise)
----   2. Path is in /tmp/ AND CLAUDECODE env var is set (fallback)
+--- Matches the filename pattern Claude Code uses: claude-prompt-<uuid>.md
+--- Works on macOS (/private/var/folders/.../T/) and Linux (/tmp/).
 ---@param bufname string
 ---@return boolean
 function M._is_claude_buffer(bufname)
-  -- Primary: temp file path created by Claude Code Ctrl+G
-  if bufname:match("^/tmp/claude%-%d+/") then
-    return true
-  end
-  -- Secondary: any /tmp/ file when CLAUDECODE=1 is set
-  if bufname:match("^/tmp/") and vim.env.CLAUDECODE == "1" then
+  if bufname:match("claude%-prompt%-[^/]+%.md$") then
     return true
   end
   return false
