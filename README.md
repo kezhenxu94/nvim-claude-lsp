@@ -39,6 +39,24 @@ require("nvim-claude-lsp").setup({
 })
 ```
 
+## Syntax Highlighting
+
+Claude buffers get syntax highlighting for Claude-specific inline syntax on top of standard Markdown:
+
+| Pattern | Examples | Highlight group |
+|---------|----------|-----------------|
+| Slash commands | `/help`, `/compact`, `/commit-commands:commit` | `ClaudeSlashCommand` |
+| @-mentions | `@file.ts`, `@src/lib/`, `@plugin` | `ClaudeAtMention` |
+
+Both groups are linked to standard groups by default (`Special` and `Identifier` respectively) so they pick up your colorscheme automatically. Override them in your config:
+
+```lua
+vim.api.nvim_set_hl(0, "ClaudeSlashCommand", { fg = "#ff9e64", bold = true })
+vim.api.nvim_set_hl(0, "ClaudeAtMention",    { fg = "#7dcfff" })
+```
+
+If the `markdown` treesitter parser is installed, it is automatically used for Claude buffers so standard Markdown highlighting (headings, code blocks, bold/italic, etc.) continues to work.
+
 ## How It Works
 
 When Claude Code opens Neovim with a temp file in `/tmp/claude-<uid>/`, this plugin detects the buffer by its path pattern and attaches a custom LSP server. The LSP server:
