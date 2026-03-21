@@ -1,26 +1,32 @@
 local M = {}
 
 M.config = {
-  -- Path to node binary
   node_cmd = "node",
 }
-
---- Detect if a buffer is a Claude Code chat input buffer.
---- Matches the filename pattern Claude Code uses: claude-prompt-<uuid>.md
---- Works on macOS (/private/var/folders/.../T/) and Linux (/tmp/).
----@param bufname string
----@return boolean
-function M._is_claude_buffer(bufname)
-  if bufname:match("claude%-prompt%-[^/]+%.md$") then
-    return true
-  end
-  return false
-end
 
 ---@param opts? {node_cmd?: string}
 function M.setup(opts)
   M.config = vim.tbl_deep_extend("force", M.config, opts or {})
   vim.g.claude_lsp_configured = true
+
+  -- Set filetype=markdown.claude on Claude Code buffers:
+  --   1. Ctrl+G chat input:   claude-prompt-<uuid>.md  (any temp dir)
+  --   2. ~/.claude/*.md        MEMORY.md and other top-level files
+  --   3. ~/.claude/**/*.md     plans/, memory/, and any other subdir
+  -- Compound filetype: markdown syntax/treesitter still applies,
+  -- but the LSP targets only this specific filetype.
+  local home = vim.fn.expand("~")
+  vim.api.nvim_create_autocmd({ "BufReadPost", "BufNewFile" }, {
+    group = vim.api.nvim_create_augroup("nvim-claude-lsp-ft", { clear = true }),
+    pattern = {
+      "claude-prompt-*.md",
+      home .. "/.claude/*.md",
+      home .. "/.claude/**/*.md",
+    },
+    callback = function(ev)
+      vim.bo[ev.buf].filetype = "markdown.claude"
+    end,
+  })
 
   -- Resolve absolute path to dist/server.js relative to this file.
   -- This file lives at: lua/nvim-claude-lsp/init.lua
@@ -30,13 +36,9 @@ function M.setup(opts)
 
   vim.lsp.config("claude_lsp", {
     cmd = { M.config.node_cmd, server_js, "--stdio" },
-    filetypes = { "markdown", "text" },
-    root_dir = function(bufnr, on_dir)
-      local bufname = vim.api.nvim_buf_get_name(bufnr)
-      if M._is_claude_buffer(bufname) then
-        on_dir(vim.fn.getcwd())
-      end
-      -- Returning without calling on_dir prevents LSP from starting
+    filetypes = { "markdown.claude" },
+    root_dir = function(_bufnr, on_dir)
+      on_dir(vim.fn.getcwd())
     end,
   })
 
