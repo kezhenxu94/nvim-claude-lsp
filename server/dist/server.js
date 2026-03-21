@@ -9377,6 +9377,54 @@ function getEnabledPluginSkillDirs() {
   }
   return [];
 }
+function discoverPluginsFromFile() {
+  const jsonPath = path2.join(os.homedir(), ".claude", "plugins", "installed_plugins.json");
+  try {
+    const raw = JSON.parse(fs2.readFileSync(jsonPath, "utf8"));
+    const result = [];
+    for (const [id, entries] of Object.entries(raw.plugins ?? {})) {
+      const arr = entries;
+      if (arr.length > 0) {
+        result.push({ name: id.split("@")[0], id, installPath: arr[0].installPath });
+      }
+    }
+    return result;
+  } catch {
+    return [];
+  }
+}
+function discoverPluginCommands() {
+  const commands = [];
+  const seen = /* @__PURE__ */ new Set();
+  let plugins = discoverPlugins();
+  if (plugins.length === 0) {
+    plugins = discoverPluginsFromFile();
+  }
+  for (const plugin of plugins) {
+    const commandsDir = path2.join(plugin.installPath, "commands");
+    for (const filePath of walkMarkdownFiles(commandsDir)) {
+      const cmdName = `/${plugin.name}:${path2.basename(filePath, ".md")}`;
+      if (seen.has(cmdName)) continue;
+      seen.add(cmdName);
+      let content;
+      try {
+        content = fs2.readFileSync(filePath, "utf8");
+      } catch {
+        continue;
+      }
+      const fm = parseFrontmatter(content);
+      const desc = fm?.description ?? "Plugin command";
+      commands.push({
+        name: cmdName,
+        detail: `(${plugin.name}) ${desc}`,
+        documentation: `**${cmdName}**
+
+${desc}`
+      });
+    }
+  }
+  return commands;
+}
 function discoverSkills(projectDir) {
   const skills = [];
   const seen = /* @__PURE__ */ new Set();
@@ -9428,10 +9476,12 @@ connection.onInitialize((params) => {
     rootPath = params.rootPath;
   }
   const skills = discoverSkills(rootPath);
-  const skillNames = new Set(skills.map((s) => s.name));
+  const pluginCommands = discoverPluginCommands();
+  const overrideNames = /* @__PURE__ */ new Set([...skills.map((s) => s.name), ...pluginCommands.map((c) => c.name)]);
   allCommands = [
-    ...BUILTIN_COMMANDS.filter((c) => !skillNames.has(c.name)),
-    ...skills
+    ...BUILTIN_COMMANDS.filter((c) => !overrideNames.has(c.name)),
+    ...skills,
+    ...pluginCommands
   ];
   allPlugins = discoverPlugins();
   return {

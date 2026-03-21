@@ -86,6 +86,68 @@ function getEnabledPluginSkillDirs(): string[] {
 }
 
 /**
+ * Read plugin metadata from ~/.claude/plugins/installed_plugins.json.
+ * Used as a fallback when `claude plugins list --json` is unavailable.
+ */
+function discoverPluginsFromFile(): Plugin[] {
+  const jsonPath = path.join(os.homedir(), ".claude", "plugins", "installed_plugins.json");
+  try {
+    const raw = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
+    const result: Plugin[] = [];
+    for (const [id, entries] of Object.entries(raw.plugins ?? {})) {
+      const arr = entries as Array<{ installPath: string }>;
+      if (arr.length > 0) {
+        result.push({ name: id.split("@")[0], id, installPath: arr[0].installPath });
+      }
+    }
+    return result;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Discover slash commands from installed plugins' `commands/` directories.
+ * Command name uses the namespaced form `/<plugin>:<cmd>` (e.g. `/commit-commands:commit`).
+ * Falls back to reading installed_plugins.json if the CLI is unavailable.
+ */
+export function discoverPluginCommands(): SlashCommand[] {
+  const commands: SlashCommand[] = [];
+  const seen = new Set<string>();
+
+  let plugins = discoverPlugins();
+  if (plugins.length === 0) {
+    plugins = discoverPluginsFromFile();
+  }
+
+  for (const plugin of plugins) {
+    const commandsDir = path.join(plugin.installPath, "commands");
+    for (const filePath of walkMarkdownFiles(commandsDir)) {
+      const cmdName = `/${plugin.name}:${path.basename(filePath, ".md")}`;
+      if (seen.has(cmdName)) continue;
+      seen.add(cmdName);
+
+      let content: string;
+      try {
+        content = fs.readFileSync(filePath, "utf8");
+      } catch {
+        continue;
+      }
+
+      const fm = parseFrontmatter(content);
+      const desc = fm?.description ?? "Plugin command";
+      commands.push({
+        name: cmdName,
+        detail: `(${plugin.name}) ${desc}`,
+        documentation: `**${cmdName}**\n\n${desc}`,
+      });
+    }
+  }
+
+  return commands;
+}
+
+/**
  * Discover Claude Code skills from (in priority order):
  *   1. <projectDir>/.claude/        — project-local skills (highest priority)
  *   2. <plugin installPath>/skills/ — enabled plugins (via `claude plugins list --json`)

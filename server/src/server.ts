@@ -9,7 +9,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { getCompletions } from "./completion";
 import { getHover } from "./hover";
 import { BUILTIN_COMMANDS, SlashCommand } from "./commands";
-import { discoverSkills, discoverPlugins, Plugin } from "./skills";
+import { discoverSkills, discoverPluginCommands, discoverPlugins, Plugin } from "./skills";
 
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
@@ -27,12 +27,14 @@ connection.onInitialize((params): InitializeResult => {
     rootPath = params.rootPath;
   }
 
-  // Skills override built-ins with the same name.
+  // Skills and plugin commands override built-ins with the same name.
   const skills = discoverSkills(rootPath);
-  const skillNames = new Set(skills.map((s) => s.name));
+  const pluginCommands = discoverPluginCommands();
+  const overrideNames = new Set([...skills.map((s) => s.name), ...pluginCommands.map((c) => c.name)]);
   allCommands = [
-    ...BUILTIN_COMMANDS.filter((c) => !skillNames.has(c.name)),
+    ...BUILTIN_COMMANDS.filter((c) => !overrideNames.has(c.name)),
     ...skills,
+    ...pluginCommands,
   ];
 
   allPlugins = discoverPlugins();
