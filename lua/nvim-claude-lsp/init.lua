@@ -4,10 +4,39 @@ M.config = {
   node_cmd = "node",
 }
 
+-- Define Claude-specific highlight groups (linked to standard groups by default).
+-- Users can override these in their colorscheme or after/plugin/*.lua.
+local function define_highlights()
+  vim.api.nvim_set_hl(0, "ClaudeSlashCommand", { default = true, link = "Special" })
+  vim.api.nvim_set_hl(0, "ClaudeAtMention", { default = true, link = "Identifier" })
+end
+
+-- Register the markdown treesitter parser for the markdown.claude compound
+-- filetype so that markdown treesitter highlighting continues to work.
+local function setup_treesitter()
+  if vim.treesitter and vim.treesitter.language and vim.treesitter.language.register then
+    pcall(vim.treesitter.language.register, "markdown", "markdown.claude")
+  end
+end
+
+-- Add buffer-local syntax patterns for Claude-specific inline syntax.
+-- These run on top of (or as fallback to) treesitter markdown highlighting.
+local function setup_syntax(buf)
+  vim.api.nvim_buf_call(buf, function()
+    -- /command  and  /plugin:command
+    vim.cmd([[syntax match ClaudeSlashCommand "\v/[a-zA-Z][a-zA-Z0-9_-]*(:[a-zA-Z][a-zA-Z0-9_-]*)?"]])
+    -- @file, @plugin, @path/to/file
+    vim.cmd([[syntax match ClaudeAtMention "\v\@[a-zA-Z0-9._/-]+"]])
+  end)
+end
+
 ---@param opts? {node_cmd?: string}
 function M.setup(opts)
   M.config = vim.tbl_deep_extend("force", M.config, opts or {})
   vim.g.claude_lsp_configured = true
+
+  define_highlights()
+  setup_treesitter()
 
   -- Set filetype=markdown.claude on Claude Code buffers:
   --   1. Ctrl+G chat input:   claude-prompt-<uuid>.md  (any temp dir)
@@ -25,6 +54,10 @@ function M.setup(opts)
     },
     callback = function(ev)
       vim.bo[ev.buf].filetype = "markdown.claude"
+      -- Schedule so syntax rules apply after the filetype event chain settles.
+      vim.schedule(function()
+        setup_syntax(ev.buf)
+      end)
     end,
   })
 
