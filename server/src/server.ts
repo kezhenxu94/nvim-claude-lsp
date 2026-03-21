@@ -28,7 +28,7 @@ connection.onInitialize((params): InitializeResult => {
   }
 
   // Skills override built-ins with the same name.
-  const skills = discoverSkills();
+  const skills = discoverSkills(rootPath);
   const skillNames = new Set(skills.map((s) => s.name));
   allCommands = [
     ...BUILTIN_COMMANDS.filter((c) => !skillNames.has(c.name)),

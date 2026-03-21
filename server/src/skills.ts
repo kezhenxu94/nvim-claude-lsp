@@ -39,37 +39,48 @@ function* walkMarkdownFiles(dir: string): Generator<string> {
 }
 
 /**
- * Discover user-installed Claude Code skills from ~/.claude/plugins/.
- * Returns them as SlashCommand objects (name prefixed with "/").
+ * Discover Claude Code skills from two locations (in priority order):
+ *   1. <projectDir>/.claude/  — project-local skills (highest priority)
+ *   2. ~/.claude/plugins/     — globally installed skills
+ *
+ * Project-local skills override global ones with the same name.
  */
-export function discoverSkills(pluginsDir?: string): SlashCommand[] {
-  const dir = pluginsDir ?? path.join(os.homedir(), ".claude", "plugins");
+export function discoverSkills(projectDir?: string, pluginsDir?: string): SlashCommand[] {
+  const globalDir = pluginsDir ?? path.join(os.homedir(), ".claude", "plugins");
   const skills: SlashCommand[] = [];
   const seen = new Set<string>();
 
-  for (const filePath of walkMarkdownFiles(dir)) {
-    let content: string;
-    try {
-      content = fs.readFileSync(filePath, "utf8");
-    } catch {
-      continue;
+  // Scan in priority order: project-local first, global second.
+  const dirs: string[] = [];
+  if (projectDir) {
+    dirs.push(path.join(projectDir, ".claude"));
+  }
+  dirs.push(globalDir);
+
+  for (const dir of dirs) {
+    for (const filePath of walkMarkdownFiles(dir)) {
+      let content: string;
+      try {
+        content = fs.readFileSync(filePath, "utf8");
+      } catch {
+        continue;
+      }
+
+      const fm = parseFrontmatter(content);
+      if (!fm?.name) continue;
+
+      const cmdName = fm.name.startsWith("/") ? fm.name : `/${fm.name}`;
+      if (seen.has(cmdName)) continue; // project-local already registered
+      seen.add(cmdName);
+
+      skills.push({
+        name: cmdName,
+        detail: fm.description ?? "User-installed skill",
+        documentation: fm.description
+          ? `**${cmdName}**\n\n${fm.description}`
+          : `**${cmdName}** — user-installed skill`,
+      });
     }
-
-    const fm = parseFrontmatter(content);
-    if (!fm?.name) continue;
-
-    // Skill names may already have "/" prefix; normalize to always have it
-    const cmdName = fm.name.startsWith("/") ? fm.name : `/${fm.name}`;
-    if (seen.has(cmdName)) continue;
-    seen.add(cmdName);
-
-    skills.push({
-      name: cmdName,
-      detail: fm.description ?? "User-installed skill",
-      documentation: fm.description
-        ? `**${cmdName}**\n\n${fm.description}`
-        : `**${cmdName}** — user-installed skill`,
-    });
   }
 
   return skills;

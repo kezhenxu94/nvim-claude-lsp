@@ -9337,29 +9337,36 @@ function* walkMarkdownFiles(dir) {
     }
   }
 }
-function discoverSkills(pluginsDir) {
-  const dir = pluginsDir ?? path2.join(os.homedir(), ".claude", "plugins");
+function discoverSkills(projectDir, pluginsDir) {
+  const globalDir = pluginsDir ?? path2.join(os.homedir(), ".claude", "plugins");
   const skills = [];
   const seen = /* @__PURE__ */ new Set();
-  for (const filePath of walkMarkdownFiles(dir)) {
-    let content;
-    try {
-      content = fs2.readFileSync(filePath, "utf8");
-    } catch {
-      continue;
-    }
-    const fm = parseFrontmatter(content);
-    if (!fm?.name) continue;
-    const cmdName = fm.name.startsWith("/") ? fm.name : `/${fm.name}`;
-    if (seen.has(cmdName)) continue;
-    seen.add(cmdName);
-    skills.push({
-      name: cmdName,
-      detail: fm.description ?? "User-installed skill",
-      documentation: fm.description ? `**${cmdName}**
+  const dirs = [];
+  if (projectDir) {
+    dirs.push(path2.join(projectDir, ".claude"));
+  }
+  dirs.push(globalDir);
+  for (const dir of dirs) {
+    for (const filePath of walkMarkdownFiles(dir)) {
+      let content;
+      try {
+        content = fs2.readFileSync(filePath, "utf8");
+      } catch {
+        continue;
+      }
+      const fm = parseFrontmatter(content);
+      if (!fm?.name) continue;
+      const cmdName = fm.name.startsWith("/") ? fm.name : `/${fm.name}`;
+      if (seen.has(cmdName)) continue;
+      seen.add(cmdName);
+      skills.push({
+        name: cmdName,
+        detail: fm.description ?? "User-installed skill",
+        documentation: fm.description ? `**${cmdName}**
 
 ${fm.description}` : `**${cmdName}** \u2014 user-installed skill`
-    });
+      });
+    }
   }
   return skills;
 }
@@ -9375,7 +9382,7 @@ connection.onInitialize((params) => {
   } else if (params.rootPath) {
     rootPath = params.rootPath;
   }
-  const skills = discoverSkills();
+  const skills = discoverSkills(rootPath);
   const skillNames = new Set(skills.map((s) => s.name));
   allCommands = [
     ...BUILTIN_COMMANDS.filter((c) => !skillNames.has(c.name)),
