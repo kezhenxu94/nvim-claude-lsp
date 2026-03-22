@@ -9201,8 +9201,8 @@ function getWordRange(doc, position) {
   });
   let start = position.character;
   let end = position.character;
-  while (start > 0 && /[\w/@]/.test(line[start - 1])) start--;
-  while (end < line.length && /[\w/@]/.test(line[end])) end++;
+  while (start > 0 && /[-\w/@:]/.test(line[start - 1])) start--;
+  while (end < line.length && /[-\w/@:]/.test(line[end])) end++;
   return {
     word: line.slice(start, end),
     range: {
