@@ -9522,6 +9522,13 @@ connection.onCompletionResolve((item) => {
     if (cmd) {
       item.documentation = { kind: "markdown", value: cmd.documentation };
     }
+  } else if (item.data?.type === "plugin") {
+    const plugin = allPlugins.find((p) => p.name === item.data.name);
+    if (plugin) {
+      item.documentation = { kind: "markdown", value: `**@${plugin.name}** \u2014 Plugin
+
+Plugin ID: \`${plugin.id}\`` };
+    }
   }
   return item;
 });
