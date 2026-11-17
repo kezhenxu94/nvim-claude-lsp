@@ -6,7 +6,11 @@ var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __commonJS = (cb, mod) => function __require() {
-  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  try {
+    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  } catch (e) {
+    throw mod = 0, e;
+  }
 };
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
@@ -3061,7 +3065,7 @@ var require_ril = __commonJS({
 var require_main = __commonJS({
   "node_modules/vscode-jsonrpc/lib/node/main.js"(exports2) {
     "use strict";
-    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
+    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
@@ -3070,10 +3074,10 @@ var require_main = __commonJS({
         } };
       }
       Object.defineProperty(o, k2, desc);
-    } : function(o, m, k, k2) {
+    }) : (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
       o[k2] = m[k];
-    });
+    }));
     var __exportStar = exports2 && exports2.__exportStar || function(m, exports3) {
       for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports3, p)) __createBinding(exports3, m, p);
     };
@@ -3756,7 +3760,7 @@ var require_main2 = __commonJS({
       })(WorkspaceEdit || (exports3.WorkspaceEdit = WorkspaceEdit = {}));
       var TextEditChangeImpl = (
         /** @class */
-        function() {
+        (function() {
           function TextEditChangeImpl2(edits, changeAnnotations) {
             this.edits = edits;
             this.changeAnnotations = changeAnnotations;
@@ -3830,11 +3834,11 @@ var require_main2 = __commonJS({
             }
           };
           return TextEditChangeImpl2;
-        }()
+        })()
       );
       var ChangeAnnotations = (
         /** @class */
-        function() {
+        (function() {
           function ChangeAnnotations2(annotations) {
             this._annotations = annotations === void 0 ? /* @__PURE__ */ Object.create(null) : annotations;
             this._counter = 0;
@@ -3873,11 +3877,11 @@ var require_main2 = __commonJS({
             return this._counter.toString();
           };
           return ChangeAnnotations2;
-        }()
+        })()
       );
       var WorkspaceChange = (
         /** @class */
-        function() {
+        (function() {
           function WorkspaceChange2(workspaceEdit) {
             var _this = this;
             this._textEditChanges = /* @__PURE__ */ Object.create(null);
@@ -4040,7 +4044,7 @@ var require_main2 = __commonJS({
             }
           };
           return WorkspaceChange2;
-        }()
+        })()
       );
       exports3.WorkspaceChange = WorkspaceChange;
       var TextDocumentIdentifier;
@@ -4686,7 +4690,7 @@ var require_main2 = __commonJS({
       })(TextDocument2 || (exports3.TextDocument = TextDocument2 = {}));
       var FullTextDocument2 = (
         /** @class */
-        function() {
+        (function() {
           function FullTextDocument3(uri, languageId, version, content) {
             this._uri = uri;
             this._languageId = languageId;
@@ -4788,7 +4792,7 @@ var require_main2 = __commonJS({
             configurable: true
           });
           return FullTextDocument3;
-        }()
+        })()
       );
       var Is;
       (function(Is2) {
@@ -6282,7 +6286,7 @@ var require_connection2 = __commonJS({
 var require_api2 = __commonJS({
   "node_modules/vscode-languageserver-protocol/lib/common/api.js"(exports2) {
     "use strict";
-    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
+    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
@@ -6291,10 +6295,10 @@ var require_api2 = __commonJS({
         } };
       }
       Object.defineProperty(o, k2, desc);
-    } : function(o, m, k, k2) {
+    }) : (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
       o[k2] = m[k];
-    });
+    }));
     var __exportStar = exports2 && exports2.__exportStar || function(m, exports3) {
       for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports3, p)) __createBinding(exports3, m, p);
     };
@@ -6324,7 +6328,7 @@ var require_api2 = __commonJS({
 var require_main3 = __commonJS({
   "node_modules/vscode-languageserver-protocol/lib/node/main.js"(exports2) {
     "use strict";
-    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
+    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
@@ -6333,10 +6337,10 @@ var require_main3 = __commonJS({
         } };
       }
       Object.defineProperty(o, k2, desc);
-    } : function(o, m, k, k2) {
+    }) : (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
       o[k2] = m[k];
-    });
+    }));
     var __exportStar = exports2 && exports2.__exportStar || function(m, exports3) {
       for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports3, p)) __createBinding(exports3, m, p);
     };
@@ -8569,7 +8573,7 @@ var require_inlineCompletion_proposed = __commonJS({
 var require_api3 = __commonJS({
   "node_modules/vscode-languageserver/lib/common/api.js"(exports2) {
     "use strict";
-    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
+    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
@@ -8578,10 +8582,10 @@ var require_api3 = __commonJS({
         } };
       }
       Object.defineProperty(o, k2, desc);
-    } : function(o, m, k, k2) {
+    }) : (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
       o[k2] = m[k];
-    });
+    }));
     var __exportStar = exports2 && exports2.__exportStar || function(m, exports3) {
       for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports3, p)) __createBinding(exports3, m, p);
     };
@@ -8616,7 +8620,7 @@ var require_api3 = __commonJS({
 var require_main4 = __commonJS({
   "node_modules/vscode-languageserver/lib/node/main.js"(exports2) {
     "use strict";
-    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? function(o, m, k, k2) {
+    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
@@ -8625,10 +8629,10 @@ var require_main4 = __commonJS({
         } };
       }
       Object.defineProperty(o, k2, desc);
-    } : function(o, m, k, k2) {
+    }) : (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
       o[k2] = m[k];
-    });
+    }));
     var __exportStar = exports2 && exports2.__exportStar || function(m, exports3) {
       for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports3, p)) __createBinding(exports3, m, p);
     };
